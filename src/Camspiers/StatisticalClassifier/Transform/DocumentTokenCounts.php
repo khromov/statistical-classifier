@@ -11,7 +11,7 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
@@ -19,27 +19,24 @@ use Camspiers\StatisticalClassifier\Index\IndexInterface;
  */
 class DocumentTokenCounts implements TransformInterface
 {
-    const PARTITION_NAME = 'document_token_counts';
-
-    private $dataPartitionName;
-
-    public function __construct($dataPartitionName)
+    protected $data;
+    
+    public function __construct($data)
     {
-        $this->dataPartitionName = $dataPartitionName;
+        $this->data = $data;
     }
-
-    public function apply(IndexInterface $index)
+    
+    public function apply(DataSourceInterface $dataSource)
     {
-        $data = $index->getPartition($this->dataPartitionName);
         $transform = array();
 
-        foreach ($data as $category => $documents) {
+        foreach ($this->data as $category => $documents) {
             $transform[$category] = 0;
             foreach ($documents as $document) {
                 $transform[$category] += count($document);
             }
         }
-
-        $index->setPartition(self::PARTITION_NAME, $transform);
+        
+        return $transform;
     }
 }

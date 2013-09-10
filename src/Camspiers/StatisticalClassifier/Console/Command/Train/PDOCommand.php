@@ -32,7 +32,7 @@ class PDOCommand extends Command
         $this
             ->setName('train:pdo')
             ->setDescription('Train the classifier with a PDO query')
-            ->configureIndex()
+            ->configureModel()
             ->addArgument(
                 'category',
                 Input\InputArgument::REQUIRED,
@@ -74,32 +74,35 @@ class PDOCommand extends Command
      */
     protected function execute(Input\InputInterface $input, Output\OutputInterface $output)
     {
-        $index = $this->getCachedIndex($input->getArgument('index'));
-        $index->setDataSource(
-            $grouped = new Grouped(
-                array(
-                    $index->getDataSource(),
-                    $pdo = new PDOQuery(
-                        $input->getArgument('category'),
-                        new PDO(
-                            $input->getArgument('dsn'),
-                            $input->getArgument('username'),
-                            $input->getArgument('password')
-                        ),
-                        $input->getArgument('query'),
-                        $input->getArgument('column')
-                    )
-                )
-            )
+        $modelName = $input->getArgument('model');
+        
+        $dataSource = $this->getDataSource($modelName);
+
+        $changes = new PDOQuery(
+            $input->getArgument('category'),
+            new PDO(
+                $input->getArgument('dsn'),
+                $input->getArgument('username'),
+                $input->getArgument('password')
+            ),
+            $input->getArgument('query'),
+            $input->getArgument('column')
         );
-        $index->preserve();
-        if ($input->getOption('prepare')) {
-            $this->getClassifier($input, $index)->prepareIndex();
+
+        foreach ($changes->getData() as $document) {
+            $dataSource->addDocument($document['category'], $document['document']);
         }
+        
+        $this->cacheDataSource($modelName);
+        
+        if ($input->getOption('prepare')) {
+            $this->getClassifier($input)->prepareModel();
+        }
+        
         $this->updateSummary(
             $output,
-            $pdo,
-            $grouped
+            $changes,
+            $dataSource
         );
     }
 }

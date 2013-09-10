@@ -11,28 +11,25 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
  * @package Statistical Classifier
  */
-class TAC implements TransformInterface
+class TokenAppearanceCount implements TransformInterface
 {
-    const PARTITION_NAME = 'token_appearance_count';
-
-    private $dataPartitionName;
-
-    public function __construct($dataPartitionName)
+    protected $tokenCountByDocument;
+    
+    public function __construct($tokenCountByDocument)
     {
-        $this->dataPartitionName = $dataPartitionName;
+        $this->tokenCountByDocument = $tokenCountByDocument;
     }
 
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
-        $data = $index->getPartition($this->dataPartitionName);
         $transform = array();
-        foreach ($data as $documents) {
+        foreach ($this->tokenCountByDocument as $documents) {
             foreach ($documents as $document) {
                 foreach ($document as $token => $count) {
                     if ($count > 0) {
@@ -44,6 +41,6 @@ class TAC implements TransformInterface
                 }
             }
         }
-        $index->setPartition(self::PARTITION_NAME, $transform);
+        return $transform;
     }
 }

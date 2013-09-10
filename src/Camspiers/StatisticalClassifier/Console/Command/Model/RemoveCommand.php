@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Camspiers\StatisticalClassifier\Console\Command\Index;
+namespace Camspiers\StatisticalClassifier\Console\Command\Model;
 
 use Camspiers\StatisticalClassifier\Console\Command\Command;
 use RuntimeException;
@@ -20,7 +20,7 @@ use Symfony\Component\Console\Output;
  * @author  Cam Spiers <camspiers@gmail.com>
  * @package Statistical Classifier
  */
-class CreateCommand extends Command
+class RemoveCommand extends Command
 {
     /**
      * Configure the commands options
@@ -29,12 +29,12 @@ class CreateCommand extends Command
     protected function configure()
     {
         $this
-            ->setName('index:create')
-            ->setDescription('Create an index')
-            ->configureIndex();
+            ->setName('model:remove')
+            ->setDescription('Remove a model')
+            ->configureModel();
     }
     /**
-     * Create the index using the specified name
+     * Remove a specified model
      * @param  Input\InputInterface   $input  The input object
      * @param  Output\OutputInterface $output The output object
      * @throws \RuntimeException
@@ -42,12 +42,11 @@ class CreateCommand extends Command
      */
     protected function execute(Input\InputInterface $input, Output\OutputInterface $output)
     {
-        $index = $input->getArgument('index');
-        if (!$this->cache->exists($index)) {
-            $this->getCachedIndex($index)->preserve();
-            $output->writeLn("Index '$index' was created");
-        } else {
-            throw new RuntimeException("Index '$index' already exists");
+        $model = $input->getArgument('model');
+
+        if ($this->cache->exists($model.'.model')) {
+            $this->cache->delete($model.'.model');
+            $output->writeLn("Model '$model' was removed");
         }
     }
 }

@@ -11,7 +11,7 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
@@ -19,58 +19,62 @@ use Camspiers\StatisticalClassifier\Index\IndexInterface;
  */
 class Complement implements TransformInterface
 {
-    const PARTITION_NAME = 'complement';
-
-    private $dataPartitionName;
-
-    public function __construct($dataPartitionName)
-    {
-        $this->dataPartitionName = $dataPartitionName;
+    protected $documentLength;
+    protected $tokensByCategory;
+    protected $documentCount;
+    protected $documentTokenCounts;
+    
+    public function __construct(
+        $documentLength,
+        $tokensByCategory,
+        $documentCount,
+        $documentTokenCounts
+    ) {
+        $this->documentLength = $documentLength;
+        $this->tokensByCategory = $tokensByCategory;
+        $this->documentCount = $documentCount;
+        $this->documentTokenCounts = $documentTokenCounts;
     }
 
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
-        $data = $index->getPartition($this->dataPartitionName);
-        $tokByCat = $index->getPartition(TBC::PARTITION_NAME);
-        $docCount = $index->getPartition(DC::PARTITION_NAME);
-        $docTokenCounts = $index->getPartition(DocumentTokenCounts::PARTITION_NAME);
-        $cats = array_keys($tokByCat);
+        $cats = array_keys($this->tokensByCategory);
         $trans = array();
 
         $tokByCatSums = array();
 
-        foreach ($tokByCat as $cat => $tokens) {
+        foreach ($this->tokensByCategory as $cat => $tokens) {
             $tokByCatSums[$cat] = array_sum($tokens);
         }
 
         $documentCounts = array();
 
-        foreach ($data as $cat => $documents) {
+        foreach ($this->documentLength as $cat => $documents) {
             $documentCounts[$cat] = count($documents);
         }
 
-        foreach ($tokByCat as $cat => $tokens) {
+        foreach ($this->tokensByCategory as $cat => $tokens) {
 
             $trans[$cat] = array();
             $categoriesSelection = array_diff($cats, array($cat));
 
-            $docsInOtherCats = $docCount - $documentCounts[$cat];
+            $docsInOtherCats = $this->documentCount - $documentCounts[$cat];
 
             foreach (array_keys($tokens) as $token) {
                 $trans[$cat][$token] = $docsInOtherCats;
                 foreach ($categoriesSelection as $currCat) {
-                    if (array_key_exists($token, $tokByCat[$currCat])) {
-                        $trans[$cat][$token] += $tokByCat[$currCat][$token];
+                    if (array_key_exists($token, $this->tokensByCategory[$currCat])) {
+                        $trans[$cat][$token] += $this->tokensByCategory[$currCat][$token];
                     }
                 }
                 foreach ($categoriesSelection as $currCat) {
-                    $trans[$cat][$token] = $trans[$cat][$token] / ($tokByCatSums[$currCat] + $docTokenCounts[$currCat]);
+                    $trans[$cat][$token] = $trans[$cat][$token] / ($tokByCatSums[$currCat] + $this->documentTokenCounts[$currCat]);
                 }
 
             }
 
         }
-
-        $index->setPartition(self::PARTITION_NAME, $trans);
+        
+        return $trans;
     }
 }

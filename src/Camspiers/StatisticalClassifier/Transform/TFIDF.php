@@ -11,7 +11,7 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
@@ -19,41 +19,37 @@ use Camspiers\StatisticalClassifier\Index\IndexInterface;
  */
 class TFIDF implements TransformInterface
 {
-    const PARTITION_NAME = 'term_frequency_inverse_document_frequency';
-
-    private $dataPartitionName;
-    private $documentCountPartitionName;
-    private $tokenAppreanceCountPartitionName;
+    private $tokenCountByDocument;
+    private $documentCount;
+    private $tokenAppreanceCount;
 
     public function __construct(
-        $dataPartitionName,
-        $documentCountPartitionName,
-        $tokenAppreanceCountPartitionName
+        $tokenCountByDocument,
+        $documentCount,
+        $tokenAppreanceCount
     ) {
-        $this->dataPartitionName = $dataPartitionName;
-        $this->documentCountPartitionName = $documentCountPartitionName;
-        $this->tokenAppreanceCountPartitionName = $tokenAppreanceCountPartitionName;
+        $this->tokenCountByDocument = $tokenCountByDocument;
+        $this->documentCount = $documentCount;
+        $this->tokenAppreanceCount = $tokenAppreanceCount;
     }
 
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
-        $documentCount = $index->getPartition($this->documentCountPartitionName);
-        $tokenAppreanceCount = $index->getPartition($this->tokenAppreanceCountPartitionName);
-        $transform = $tokenCountByDocument = $index->getPartition($this->dataPartitionName);
-        foreach ($tokenCountByDocument as $category => $documents) {
-            foreach ($documents as $documentIndex => $document) {
+        $transform = $this->tokenCountByDocument;
+        foreach ($this->tokenCountByDocument as $category => $documents) {
+            foreach ($documents as $documentModel => $document) {
                 foreach ($document as $token => $count) {
                     $transform
                     [$category]
-                    [$documentIndex]
+                    [$documentModel]
                     [$token] = log($count + 1, 10) * log(
-                        $documentCount / $tokenAppreanceCount[$token],
+                        $this->documentCount / $this->tokenAppreanceCount[$token],
                         10
                     );
                 }
             }
         }
-        $index->setPartition(self::PARTITION_NAME, $transform);
-
+        
+        return $transform;
     }
 }

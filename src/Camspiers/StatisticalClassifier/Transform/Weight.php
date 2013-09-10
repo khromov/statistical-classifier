@@ -11,7 +11,7 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
@@ -19,23 +19,20 @@ use Camspiers\StatisticalClassifier\Index\IndexInterface;
  */
 class Weight implements TransformInterface
 {
-    const PARTITION_NAME = 'weight';
+    private $data;
 
-    private $dataPartitionName;
-
-    public function __construct($dataPartitionName)
+    public function __construct($data)
     {
-        $this->dataPartitionName = $dataPartitionName;
+        $this->data = $data;
     }
 
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
-        $data = $index->getPartition($this->dataPartitionName);
-        foreach ($data as $category => $tokens) {
+        foreach ($this->data as $category => $tokens) {
             foreach ($tokens as $token => $value) {
-                $data[$category][$token] = log($value, 10);
+                $this->data[$category][$token] = log($value, 10);
             }
         }
-        $index->setPartition(self::PARTITION_NAME, $data);
+        return $this->data;
     }
 }

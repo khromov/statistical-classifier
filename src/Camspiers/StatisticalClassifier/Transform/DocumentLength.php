@@ -11,27 +11,26 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
  * @package Statistical Classifier
  */
-class DL implements TransformInterface
+class DocumentLength implements TransformInterface
 {
-    const PARTITION_NAME = 'document_length';
-
-    private $dataPartitionName;
-
-    public function __construct($dataPartitionName)
+    protected $tfidf;
+    
+    public function __construct($tfidf)
     {
-        $this->dataPartitionName = $dataPartitionName;
+        $this->tfidf = $tfidf;
     }
 
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
-        $transform = $tokenCountByDocument = $index->getPartition($this->dataPartitionName);
-        foreach ($tokenCountByDocument as $category => $documents) {
+        $transform = $this->tfidf;
+        
+        foreach ($this->tfidf as $category => $documents) {
             foreach ($documents as $documentIndex => $document) {
                 $denominator = 0;
                 foreach ($document as $count) {
@@ -40,12 +39,13 @@ class DL implements TransformInterface
                 $denominator = sqrt($denominator);
                 foreach ($document as $token => $count) {
                     $transform
-                    [$category]
-                    [$documentIndex]
-                    [$token] = $count / $denominator;
+                        [$category]
+                        [$documentIndex]
+                        [$token] = $count / $denominator;
                 }
             }
         }
-        $index->setPartition(self::PARTITION_NAME, $transform);
+        
+        return $transform;
     }
 }

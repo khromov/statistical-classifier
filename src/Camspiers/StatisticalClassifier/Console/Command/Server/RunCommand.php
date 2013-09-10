@@ -11,9 +11,10 @@
 
 namespace Camspiers\StatisticalClassifier\Console\Command\Server;
 
-use Camspiers\StatisticalClassifier\Classifier\ClassifierInterface;
+use Camspiers\StatisticalClassifier\Classifier\Classifier;
 use Camspiers\StatisticalClassifier\Console\Command\Command;
-use Camspiers\StatisticalClassifier\Index;
+use Camspiers\StatisticalClassifier\DataSource\DataArray;
+use Camspiers\StatisticalClassifier\Model;
 use React\EventLoop;
 use React\Http;
 use React\Socket;
@@ -24,7 +25,7 @@ use Symfony\Component\Console\Output;
  * @author  Cam Spiers <camspiers@gmail.com>
  * @package Statistical Classifier
  */
-class StartCommand extends Command
+class RunCommand extends Command
 {
     /**
      * Holds classifier instances
@@ -32,10 +33,10 @@ class StartCommand extends Command
      */
     protected $classifiers = array();
     /**
-     * Holds index instances
+     * Holds model instances
      * @var array
      */
-    protected $indexes = array();
+    protected $models = array();
     /**
      * Configure the commands options
      * @return null
@@ -43,8 +44,8 @@ class StartCommand extends Command
     protected function configure()
     {
         $this
-            ->setName('server:start')
-            ->setDescription('Start a classifier server')
+            ->setName('server:run')
+            ->setDescription('Run a classifier server')
             ->addOption(
                 'host',
                 null,
@@ -68,10 +69,14 @@ class StartCommand extends Command
      */
     protected function execute(Input\InputInterface $input, Output\OutputInterface $output)
     {
-        // Set a dummy index
+        // Set a dummy model
         $this->getContainer()->set(
-            'index.index',
-            new Index\Index()
+            'classifier.model',
+            new Model\Model()
+        );
+        $this->getContainer()->set(
+            'classifier.source',
+            new DataArray()
         );
 
         $http = new Http\Server(
@@ -105,20 +110,13 @@ class StartCommand extends Command
         Http\Request $request,
         Http\Response $response
     ) {
-        switch ($request->getPath()) {
+        $path = rtrim($request->getPath(), '/');
+        switch ($path) {
             case '/classify':
-            case '/classify/':
-                $this->classify(
-                    $request,
-                    $response
-                );
+                $this->classify($request, $response);
                 break;
             case '/train':
-            case '/train/':
-                $this->train(
-                    $request,
-                    $response
-                );
+                $this->train($request, $response);
                 break;
             default:
                 $response->writeHead(404, array('Content-Type' => 'text/plain'));
@@ -137,21 +135,17 @@ class StartCommand extends Command
         Http\Request $request,
         Http\Response $response
     ) {
-
         $query = $request->getQuery();
 
-        if (isset($query['index'])) {
+        if (isset($query['model'])) {
 
             $classifierType = isset($query['classifier']) ? $query['classifier'] : 'classifier.complement_naive_bayes';
 
             $classifier = $this->getClassifierByType($classifierType);
 
-            $classifier->setIndex(
-                $this->getIndex(
-                    $query['index'],
-                    isset($query['fresh'])
-                )
-            );
+            $classifier->setModel($this->getModel($query['model'], $classifierType == 'classifier.svm'));
+            
+            $classifier->setDataSource($this->getDataSource($query['model']));
 
             $response->writeHead(
                 200,
@@ -190,13 +184,13 @@ class StartCommand extends Command
         } else {
 
             $response->writeHead(400, array('Content-Type' => 'text/plain'));
-            $response->end('Bad request an index must be specified');
+            $response->end('Bad request, a model must be specified');
 
         }
 
     }
     /**
-     * Train an index with a document
+     * Train an model with a document
      * @param Http\Request  $request
      * @param Http\Response $response
      */
@@ -207,12 +201,7 @@ class StartCommand extends Command
 
         $query = $request->getQuery();
 
-        if (isset($query['index']) && isset($query['category'])) {
-
-            $index = $this->getIndex(
-                $query['index'],
-                isset($query['fresh'])
-            );
+        if (isset($query['model']) && isset($query['category'])) {
 
             $response->writeHead(
                 200,
@@ -223,7 +212,11 @@ class StartCommand extends Command
 
             if (isset($query['document'])) {
 
-                $index->getDataSource()->addDocument($query['category'], $query['document']);
+                $datasource = $this->getDataSource($query['model']);
+
+                $datasource->addDocument($query['category'], $query['document']);
+
+                $this->cacheDataSource($query['model']);
 
                 $response->end(
                     json_encode(
@@ -237,9 +230,13 @@ class StartCommand extends Command
 
                 $request->on(
                     'data',
-                    function ($document) use ($response, $query, $index) {
+                    function ($document) use ($response, $query) {
 
-                        $index->getDataSource()->addDocument($query['category'], $document);
+                        $datasource = $this->getDataSource($query['model']);
+
+                        $datasource->addDocument($query['category'], $document);
+
+                        $this->cacheDataSource($query['model']);
 
                         $response->end(
                             json_encode(
@@ -252,11 +249,13 @@ class StartCommand extends Command
                 );
 
             }
+            
+            $this->getModel($query['model'])->setPrepared(false);
 
         } else {
 
             $response->writeHead(400, array('Content-Type' => 'text/plain'));
-            $response->end('Bad request an index must be specified');
+            $response->end('Bad request an model must be specified');
 
         }
 
@@ -264,7 +263,7 @@ class StartCommand extends Command
     /**
      * Get a classifier from the container using a service name
      * @param  string              $classifierType The service name
-     * @return ClassifierInterface The classifier
+     * @return Classifier The classifier
      */
     protected function getClassifierByType($classifierType)
     {
@@ -273,19 +272,5 @@ class StartCommand extends Command
         }
 
         return $this->classifiers[$classifierType];
-    }
-    /**
-     * Get a cached index by name
-     * @param  string            $name  The index name
-     * @param  boolean           $fresh Whether or not to get a fresh one even if it exists
-     * @return Index\CachedIndex The index
-     */
-    protected function getIndex($name, $fresh = false)
-    {
-        if (!isset($this->indexes[$name]) || $fresh) {
-            $this->indexes[$name] = $this->getCachedIndex($name);
-        }
-
-        return $this->indexes[$name];
     }
 }

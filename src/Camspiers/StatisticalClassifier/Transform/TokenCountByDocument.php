@@ -11,7 +11,7 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 use Camspiers\StatisticalClassifier\Normalizer\NormalizerInterface;
 use Camspiers\StatisticalClassifier\Tokenizer\TokenizerInterface;
 
@@ -19,10 +19,11 @@ use Camspiers\StatisticalClassifier\Tokenizer\TokenizerInterface;
  * @author  Cam Spiers <camspiers@gmail.com>
  * @package Statistical Classifier
  */
-class TCBD implements TransformInterface
+class TokenCountByDocument implements TransformInterface
 {
-    const PARTITION_NAME = 'token_count_by_document';
-
+    protected $tokenizer;
+    protected $normalizer;
+    
     public function __construct(
         TokenizerInterface $tokenizer,
         NormalizerInterface $normalizer
@@ -31,10 +32,10 @@ class TCBD implements TransformInterface
         $this->normalizer = $normalizer;
     }
 
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
         $transform = array();
-        foreach ($index->getDataSource()->getData() as $document) {
+        foreach ($dataSource->getData() as $document) {
             if (!isset($transform[$document['category']])) {
                 $transform[$document['category']] = array();
             }
@@ -46,6 +47,6 @@ class TCBD implements TransformInterface
                 )
             );
         }
-        $index->setPartition(self::PARTITION_NAME, $transform);
+        return $transform;
     }
 }

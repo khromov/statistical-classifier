@@ -11,29 +11,26 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
  * @package Statistical Classifier
  */
-class TBC implements TransformInterface
+class TokensByCategory implements TransformInterface
 {
-    const PARTITION_NAME = 'tokens_by_category';
-
-    private $dataPartitionName;
-
-    public function __construct($dataPartitionName)
+    protected $tokenCountbyDocument;
+    
+    public function __construct($tokenCountbyDocument)
     {
-        $this->dataPartitionName = $dataPartitionName;
+        $this->tokenCountbyDocument = $tokenCountbyDocument;
     }
 
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
-        $data = $index->getPartition($this->dataPartitionName);
-
         $transform = array();
-        foreach ($data as $category => $documents) {
+        
+        foreach ($this->tokenCountbyDocument as $category => $documents) {
             $transform[$category] = array();
             foreach ($documents as $document) {
                 foreach (array_keys($document) as $token) {
@@ -45,7 +42,7 @@ class TBC implements TransformInterface
                 }
             }
         }
-
-        $index->setPartition(self::PARTITION_NAME, $transform);
+        
+        return $transform;
     }
 }

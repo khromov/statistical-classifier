@@ -11,7 +11,7 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
@@ -19,5 +19,5 @@ use Camspiers\StatisticalClassifier\Index\IndexInterface;
  */
 interface TransformInterface
 {
-    public function apply(IndexInterface $index);
+    public function apply(DataSourceInterface $dataSource);
 }

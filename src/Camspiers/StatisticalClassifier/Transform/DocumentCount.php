@@ -11,18 +11,16 @@
 
 namespace Camspiers\StatisticalClassifier\Transform;
 
-use Camspiers\StatisticalClassifier\Index\IndexInterface;
+use Camspiers\StatisticalClassifier\DataSource\DataSourceInterface;
 
 /**
  * @author  Cam Spiers <camspiers@gmail.com>
  * @package Statistical Classifier
  */
-class DC implements TransformInterface
+class DocumentCount implements TransformInterface
 {
-    const PARTITION_NAME = 'document_count';
-
-    public function apply(IndexInterface $index)
+    public function apply(DataSourceInterface $dataSource)
     {
-        $index->setPartition(self::PARTITION_NAME, count($index->getDataSource()->getData()));
+        return count($dataSource->getData());
     }
 }

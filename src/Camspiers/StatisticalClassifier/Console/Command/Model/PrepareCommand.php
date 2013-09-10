@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Camspiers\StatisticalClassifier\Console\Command\Index;
+namespace Camspiers\StatisticalClassifier\Console\Command\Model;
 
 use Camspiers\StatisticalClassifier\Console\Command\Command;
 use RuntimeException;
@@ -29,13 +29,13 @@ class PrepareCommand extends Command
     protected function configure()
     {
         $this
-            ->setName('index:prepare')
-            ->setDescription('Prepare an index')
-            ->configureIndex()
+            ->setName('model:prepare')
+            ->setDescription('Prepare an model')
+            ->configureModel()
             ->configureClassifier();
     }
     /**
-     * Prepare a specified index
+     * Prepare a specified model
      * @param  Input\InputInterface   $input  The input object
      * @param  Output\OutputInterface $output The output object
      * @throws \RuntimeException
@@ -43,12 +43,12 @@ class PrepareCommand extends Command
      */
     protected function execute(Input\InputInterface $input, Output\OutputInterface $output)
     {
-        $index = $input->getArgument('index');
-        if ($this->cache->exists($index)) {
-            $this->getClassifier($input)->prepareIndex();
-            $output->writeLn("Index '$index' was prepared");
+        $model = $input->getArgument('model');
+        if ($this->cache->exists($model)) {
+            $this->getClassifier($input)->prepareModel();
+            $output->writeLn("Model '$model' was prepared");
         } else {
-            throw new RuntimeException("Index '$index' doesn't exist");
+            throw new RuntimeException("Model '$model' doesn't exist");
         }
     }
 }
